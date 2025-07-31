@@ -4,8 +4,10 @@ ipykernel
 langchain_groq
 langchain_google_genai
 langchain_community
+langchain_openai
 pypdf
 faiss-cpu
 structlog
 PyMuPDF
+dotenv
 #-e .
