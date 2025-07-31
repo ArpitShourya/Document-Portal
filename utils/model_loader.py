@@ -9,7 +9,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 log=CustomLogger().get_logger(__file__)
 
-class ModelTrainer:
+class ModelLoader:
     def __init__(self):
         load_dotenv()
         self._validate_env()
@@ -22,7 +22,7 @@ class ModelTrainer:
         Ensure API keys exist.
         """
         required_vars=["GOOGLE_API_KEY","GROQ_API_KEY"]
-        self.api_keys=[os.getenv(key) for key in required_vars]
+        self.api_keys={key:os.getenv(key) for key in required_vars}
         missing=[k for k,v in self.api_keys.items() if not v]
         if missing:
             log.error("Missing environment variables",missing_vars=missing)
@@ -30,7 +30,7 @@ class ModelTrainer:
         log.info("Environment variables validated",available_keys=[k for k in self.api_keys if self.api_keys[k]])
 
 
-    def load_embedding(self):
+    def load_embeddings(self):
         """
         Load the embedding model
         """
@@ -90,3 +90,22 @@ class ModelTrainer:
         else:
             log.error("Unsupported LLM provider", provider=provider)
             raise ValueError(f"Unsupported LLM provider: {provider}")
+        
+if __name__ == "__main__":
+    loader = ModelLoader()
+    
+    # Test embedding model loading
+    embeddings = loader.load_embeddings()
+    print(f"Embedding Model Loaded: {embeddings}")
+    
+    # Test the ModelLoader
+    result=embeddings.embed_query("Hello, how are you?")
+    print(f"Embedding Result: {result}")
+    
+    # Test LLM loading based on YAML config
+    llm = loader.load_llm()
+    print(f"LLM Loaded: {llm}")
+    
+    # Test the ModelLoader
+    result=llm.invoke("Hello, how are you?")
+    print(f"LLM Result: {result.content}")
