@@ -7,3 +7,5 @@ logs/
 *.pyc
 test.py
 data/
+data
+/data
