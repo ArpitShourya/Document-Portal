@@ -3,7 +3,7 @@ from logger.custom_logger import CustomLogger
 logger=CustomLogger().get_logger(__file__)
 
 class DocumentPortalException(Exception):
-    def __init__(self, error_msg):
+    def __init__(self, error_msg,_):
         exc_type,exc_value,exc_tb=sys.exc_info()
         self.file_name=exc_tb.tb_frame.f_code.co_filename
         self.line_no=exc_tb.tb_lineno
