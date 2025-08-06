@@ -11,4 +11,7 @@ structlog
 PyMuPDF
 dotenv
 pandas
+streamlit
+langchain-core[tracing]
+pytest
 #-e .
