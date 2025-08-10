@@ -14,4 +14,5 @@ pandas
 streamlit
 langchain-core[tracing]
 pytest
+docx2txt
 #-e .
