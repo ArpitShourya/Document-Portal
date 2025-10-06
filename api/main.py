@@ -1,11 +1,16 @@
 import os
 from typing import List, Optional, Any, Dict
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, status
+
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware 
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
+from src.database.database import SessionLocal
+from src.database.models import User
+from src.database.auth import verify_password
 
 from src.document_ingestion.data_ingestion import (
     DocHandler,
@@ -17,16 +22,26 @@ from src.document_compare.document_comparator import DocumentComparatorLLM
 from src.document_chat.retrieval import ConversationalRAG
 from utils.document_ops import FastAPIFileAdapter,read_pdf_via_handler
 from logger import GLOBAL_LOGGER as log
+from langchain.globals import set_llm_cache
+from langchain_community.cache import InMemoryCache
+
+# Enable LangChain in-memory cache
+set_llm_cache(InMemoryCache())
 
 FAISS_BASE = os.getenv("FAISS_BASE", "faiss_index")
 UPLOAD_BASE = os.getenv("UPLOAD_BASE", "data")
-FAISS_INDEX_NAME = os.getenv("FAISS_INDEX_NAME", "index")  # <--- keep consistent with save_local()
+FAISS_INDEX_NAME = os.getenv("FAISS_INDEX_NAME", "index") 
 
 app = FastAPI(title="Document Portal API", version="0.1")
+
+
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+app.add_middleware(SessionMiddleware, secret_key="supersecret", max_age=3600)
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,12 +51,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# VALID_USER = os.getenv("PORTAL_USER", "admin")
+# VALID_PASS = os.getenv("PORTAL_PASS", "password")
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request):
+    # Always show login form, clear any old session
+    request.session.clear()
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/login")
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.username == username).first()
+        if user and verify_password(password, user.hashed_password):
+            request.session["user"] = user.username
+            return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        else:
+            return templates.TemplateResponse(
+                "login.html", 
+                {"request": request, "error": "Invalid username or password"}, 
+                status_code=400
+            )
+    finally:
+        db.close()
+
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_ui(request: Request):
-    log.info("Serving UI homepage.")
-    resp = templates.TemplateResponse("index.html", {"request": request})
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
+    user = request.session.get("user")
+    if not user:
+        # user not logged in → redirect to login
+        return RedirectResponse(url="/login")
+    # logged in → show index.html
+    return templates.TemplateResponse("index.html", {"request": request, "user": user})
+
+
+# @app.get("/", response_class=HTMLResponse)
+# async def serve_ui(request: Request):
+#     log.info("Serving UI homepage.")
+#     resp = templates.TemplateResponse("index.html", {"request": request})
+#     resp.headers["Cache-Control"] = "no-store"
+#     return resp
 
 @app.get("/health")
 def health() -> Dict[str, str]:

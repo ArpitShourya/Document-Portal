@@ -16,7 +16,13 @@ packages = [
     "fastapi",
     "uvicorn",
     "python-multipart",
-    "docx2txt"
+    "docx2txt",
+    "pypdf",
+    "unstructured",
+    "deepeval",
+    "itsdangerous",
+    "passlib",
+    "bcrypt"
 ]
 for pkg in packages:
     try:

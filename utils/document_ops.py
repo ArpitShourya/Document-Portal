@@ -3,10 +3,31 @@ from pathlib import Path
 from typing import Iterable, List
 from fastapi import UploadFile
 from langchain.schema import Document
-from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
+from langchain_community.utilities import SQLDatabase
+from langchain_community.document_loaders import (
+    PyPDFLoader,
+    Docx2txtLoader,
+    TextLoader,
+    UnstructuredPowerPointLoader,
+    UnstructuredMarkdownLoader,
+    UnstructuredExcelLoader,
+    CSVLoader,
+    SQLDatabaseLoader
+)
+
 from logger import GLOBAL_LOGGER as log
 from exception.custom_exception import DocumentPortalException
-SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
+SUPPORTED_EXTENSIONS = {
+    ".pdf",
+    ".docx",
+    ".txt",
+    ".ppt",     # PowerPoint
+    ".pptx",
+    ".md",      # Markdown
+    ".xlsx",    # Excel
+    ".csv",     # CSV
+    ".db",      # SQLite DB (or any SQL db file extension you expect)
+}
 
 
 def load_documents(paths: Iterable[Path]) -> List[Document]:
@@ -17,14 +38,41 @@ def load_documents(paths: Iterable[Path]) -> List[Document]:
             ext = p.suffix.lower()
             if ext == ".pdf":
                 loader = PyPDFLoader(str(p))
+                docs.extend(loader.load())
             elif ext == ".docx":
                 loader = Docx2txtLoader(str(p))
+                docs.extend(loader.load())
             elif ext == ".txt":
                 loader = TextLoader(str(p), encoding="utf-8")
+                docs.extend(loader.load())
+            elif ext in [".ppt", ".pptx"]:
+                loader = UnstructuredPowerPointLoader(str(p))
+                docs.extend(loader.load())
+            elif ext == ".md":
+                loader = UnstructuredMarkdownLoader(str(p))
+                docs.extend(loader.load())
+            elif ext in [".xls", ".xlsx"]:
+                loader=UnstructuredExcelLoader(str(p))
+                docs.extend(loader.load())
+            elif ext == ".csv":
+                loader=CSVLoader(str(p))
+                docs.extend(loader.load())
+            elif ext in [".db",".sqlite"]:
+                db = SQLDatabase.from_uri(f"sqlite:///{str(p)}")
+                tables=db.get_usable_table_names()
+                for table in tables:
+                    query = f"SELECT * FROM {table}"
+                    loader = SQLDatabaseLoader(db, query=query)
+                    table_docs = loader.load()
+                    # tag with table name
+                    for d in table_docs:
+                        d.metadata["table"] = table
+                    docs.extend(table_docs)
+                
             else:
                 log.warning("Unsupported extension skipped", path=str(p))
                 continue
-            docs.extend(loader.load())
+            # docs.extend(loader.load())
         log.info("Documents loaded", count=len(docs))
         return docs
     except Exception as e:

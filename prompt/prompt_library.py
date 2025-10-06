@@ -11,7 +11,29 @@ Analyze this document:
 {document_text}
 """)
 
-document_comparison_prompt= ChatPromptTemplate.from_template("""
+document_comparison_prompt = ChatPromptTemplate.from_template("""
+You will be provided with the content from two documents of the same type. 
+Your tasks are as follows:
+
+1. Compare the content in the two documents.
+2. Identify the differences between them.
+   - For PDFs, DOCX, PPT, and TXT: provide a **page-wise or section-wise comparison**.
+   - For CSV and Excel files: provide a **row-wise or cell-wise comparison**.
+   - For Markdown: provide a **section/heading-wise comparison**.
+   - For Databases (SQLite/DB files): compare **table structures, row counts, and row-level differences**.
+3. If there is no change in a given page/section/row, explicitly mention **"NO CHANGE"**.
+
+Input documents:
+
+{combined_docs}
+
+Your response should follow this format:
+
+{format_instruction}
+""")
+
+
+"""document_comparison_prompt= ChatPromptTemplate.from_template(\"""
 You will be provided with content from two PDFs. Your tasks are as follows:
 
 1. Compare the content in two PDFs
@@ -26,7 +48,8 @@ Input documents:
 Your response should follow this format:
 
 {format_instruction}
-""")
+\""")
+"""
 
 # Prompt for contextual question rewriting
 contextualize_question_prompt = ChatPromptTemplate.from_messages([

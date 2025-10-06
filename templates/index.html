@@ -50,15 +50,15 @@
     <section id="tab-compare" class="tab-panel">
       <div class="card">
         <h2>🆚 Compare Two Documents</h2>
-        <p class="muted">Upload a reference PDF and an actual PDF to see page-wise differences.</p>
+        <p class="muted">Upload a reference Document and an actual Document to see differences.</p>
         <form id="form-compare" class="form-grid-2" onsubmit="return false;">
           <div class="field">
             <label for="cmp-ref">Reference PDF</label>
-            <input id="cmp-ref" type="file" accept=".pdf" required />
+            <input id="cmp-ref" type="file" accept=".pdf,.docx,.txt,.ppt,.pptx,.md,.xlsx,.csv,.db" , required />
           </div>
           <div class="field">
             <label for="cmp-act">Actual PDF</label>
-            <input id="cmp-act" type="file" accept=".pdf" required />
+            <input id="cmp-act" type="file" accept=".pdf,.docx,.txt,.ppt,.pptx,.md,.xlsx,.csv,.db" required />
           </div>
           <div class="actions span-2">
             <button id="btn-compare" class="btn primary">Compare</button>
@@ -90,7 +90,7 @@
         <form id="form-chat-index" class="form-grid" onsubmit="return false;">
           <div class="field">
             <label for="chat-files">Upload files</label>
-            <input id="chat-files" type="file" multiple accept=".pdf,.docx,.txt" />
+            <input id="chat-files" type="file" multiple accept=".pdf,.docx,.txt,.ppt,.pptx,.md,.xlsx,.csv,.db" />
             <small class="help">You can select multiple files.</small>
           </div>
 
@@ -205,6 +205,14 @@
       return;
     }
 
+    const refExt = ref.name.split('.').pop().toLowerCase();
+    const actExt = act.name.split('.').pop().toLowerCase();
+
+    if (refExt !== actExt) {
+      tbody.innerHTML = `<tr><td colspan="2" class="muted center">❌ Both files must have the SAME extension (.pdf, .docx, .pptx, etc.).</td></tr>`;
+      return; // stop execution here
+    }
+
     try {
       tbody.innerHTML = `<tr><td colspan="2" class="center">Comparing…</td></tr>`;
 
@@ -304,6 +312,9 @@
     }
   });
 </script>
+<form action="/logout" method="get">
+    <button type="submit">Logout</button>
+</form>
 
 </body>
 </html>

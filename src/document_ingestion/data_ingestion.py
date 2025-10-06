@@ -17,7 +17,18 @@ from exception.custom_exception import DocumentPortalException
 from utils.file_io import generate_session_id, save_uploaded_files
 from utils.document_ops import load_documents, concat_for_analysis, concat_for_comparison
 
-SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
+SUPPORTED_EXTENSIONS = {
+    ".pdf",
+    ".docx",
+    ".txt",
+    ".ppt",     # PowerPoint
+    ".pptx",
+    ".md",      # Markdown
+    ".xlsx",    # Excel
+    ".csv",     # CSV
+    ".db",      # SQLite DB (or any SQL db file extension you expect)
+}
+
 
 # FAISS Manager (load-or-create)
 class FaissManager:
@@ -213,6 +224,7 @@ class DocHandler:
         except Exception as e:
             log.error("Failed to read PDF", error=str(e), pdf_path=pdf_path, session_id=self.session_id)
             raise DocumentPortalException(f"Could not process PDF: {pdf_path}", e) from e
+        
 class DocumentComparator:
     """
     Save, read & combine PDFs for comparison with session-based versioning.
@@ -224,7 +236,68 @@ class DocumentComparator:
         self.session_path.mkdir(parents=True, exist_ok=True)
         log.info("DocumentComparator initialized", session_path=str(self.session_path))
 
-    def save_uploaded_files(self, reference_file, actual_file):
+    def save_uploaded_files(self, reference_file:Path, actual_file:Path):
+        try:
+            ref_path=self.session_path/reference_file.name
+            act_path=self.session_path/actual_file.name
+
+            ref_ext, act_ext = ref_path.suffix.lower(), act_path.suffix.lower()
+            if ref_ext != act_ext:
+                raise ValueError("Both files must have the same extension.")
+            if ref_ext not in SUPPORTED_EXTENSIONS:
+                raise ValueError(f"Extension {ref_ext} not supported.")
+
+            # Save files
+            for fobj, out in ((reference_file, ref_path), (actual_file, act_path)):
+                with open(out, "wb") as f:
+                    if hasattr(fobj, "read"):
+                        f.write(fobj.read())
+                    else:
+                        f.write(fobj.getbuffer())
+
+            log.info("Files saved", reference=str(ref_path), actual=str(act_path), session=self.session_id)
+            return ref_path, act_path
+        except Exception as e:
+            log.error("Error saving files", error=str(e), session=self.session_id)
+            raise DocumentPortalException("Error saving files",e) from e
+        
+    def read_document(self, file_path: Path) -> str:
+        """Read document content as plain text via loaders."""
+        try:
+            docs = load_documents([file_path])   # reuse your general loader
+            text = "\n".join(d.page_content for d in docs if d.page_content.strip())
+            log.info("Document read successfully", file=str(file_path), chars=len(text))
+            return text
+        except Exception as e:
+            log.error("Error reading document", file=str(file_path), error=str(e))
+            raise DocumentPortalException("Error reading document", e) from e
+        
+    def combine_documents(self) -> str:
+        """Combine all uploaded documents in this session into one text string."""
+        try:
+            files = sorted([f for f in self.session_path.iterdir() if f.is_file()])
+            if not files:
+                raise ValueError("No files found in session.")
+
+            # Ensure all files have same extension
+            exts = {f.suffix.lower() for f in files}
+            if len(exts) > 1:
+                raise ValueError("All files must have the same extension for comparison.")
+
+            doc_parts = []
+            for file in files:
+                content = self.read_document(file)
+                doc_parts.append(f"Document: {file.name}\n{content}")
+
+            combined_text = "\n\n".join(doc_parts)
+            log.info("Documents combined", count=len(doc_parts), session=self.session_id)
+            return combined_text
+        except Exception as e:
+            log.error("Error combining documents", error=str(e), session=self.session_id)
+            raise DocumentPortalException("Error combining documents", e) from e
+
+
+    """def save_uploaded_files(self, reference_file, actual_file):
         try:
             ref_path = self.session_path / reference_file.name
             act_path = self.session_path / actual_file.name
@@ -271,7 +344,7 @@ class DocumentComparator:
             return combined_text
         except Exception as e:
             log.error("Error combining documents", error=str(e), session=self.session_id)
-            raise DocumentPortalException("Error combining documents", e) from e
+            raise DocumentPortalException("Error combining documents", e) from e"""
 
     def clean_old_sessions(self, keep_latest: int = 3):
         try:

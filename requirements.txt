@@ -16,5 +16,10 @@ docx2txt==0.9
 ipykernel==6.30.0
 streamlit==1.47.1
 pytest==8.4.1
-pypdf
+pypdf==5.8.0
+unstructured==0.18.15
+deepeval==3.5.4
+itsdangerous==2.2.0
+passlib==1.7.4
+bcrypt==4.0.1
 #-e .   # <- sirf tab rakho jab pyproject.toml/setup.py ho

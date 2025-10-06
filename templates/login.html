@@ -1,0 +1,29 @@
+<!-- templates/login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Login - Document Portal</title>
+  <link href="/static/style.css" rel="stylesheet" />
+</head>
+<body>
+  <main class="container small">
+    <div class="card">
+      <h2>🔐 Login</h2>
+      <form method="post" action="/login">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" name="username" required />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" required />
+        </div>
+        <div class="actions">
+          <button class="btn primary" type="submit">Login</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</body>
+</html>
